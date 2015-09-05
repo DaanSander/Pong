@@ -1102,11 +1102,114 @@ Main.prototype = $extend(openfl_display_Sprite.prototype,{
 		this.ball.set_x(250);
 		this.ball.set_y(250);
 		this.addChild(this.ball);
+		var scoreFormat = new openfl_text_TextFormat("Verdana",24,12303291,true);
+		scoreFormat.align = openfl_text_TextFormatAlign.CENTER;
+		this.scoreField = new openfl_text_TextField();
+		this.addChild(this.scoreField);
+		this.scoreField.set_width(500);
+		this.scoreField.set_y(30);
+		this.scoreField.set_defaultTextFormat(scoreFormat);
+		this.scoreField.set_selectable(false);
+		var messageFormat = new openfl_text_TextFormat("Verdana",18,12303291,true);
+		messageFormat.align = openfl_text_TextFormatAlign.CENTER;
+		this.messageField = new openfl_text_TextField();
+		this.addChild(this.messageField);
+		this.messageField.set_width(500);
+		this.messageField.set_y(450);
+		this.messageField.set_defaultTextFormat(messageFormat);
+		this.messageField.set_selectable(false);
+		this.messageField.set_text("Press space to start\nUse arrow keys to move your platform");
+		this.playerScore = 0;
+		this.AIScore = 0;
+		this.arrowKeyUp = false;
+		this.arrowKeyDown = false;
+		this.platformSpeed = 7;
+		this.ballSpeed = 7;
+		this.ballMovement = new openfl_geom_Point(0,0);
+		this.setGameState(GameState.Paused);
+		this.stage.addEventListener(openfl_events_KeyboardEvent.KEY_UP,$bind(this,this.keyUp));
+		this.stage.addEventListener(openfl_events_KeyboardEvent.KEY_DOWN,$bind(this,this.keyDown));
+		this.addEventListener(openfl_events_Event.ENTER_FRAME,$bind(this,this.everyFrame));
 	}
 	,added: function(e) {
 		this.removeEventListener(openfl_events_Event.ADDED_TO_STAGE,$bind(this,this.added));
 		this.stage.addEventListener(openfl_events_Event.RESIZE,$bind(this,this.resize));
 		this.init();
+	}
+	,updateScore: function() {
+		this.scoreField.set_text(this.playerScore + " : " + this.AIScore);
+	}
+	,setGameState: function(state) {
+		this.gameState = state;
+		this.updateScore();
+		if(state == GameState.Paused) this.messageField.set_alpha(1); else {
+			this.messageField.set_alpha(0);
+			this.platform1.set_y(200);
+			this.platform2.set_y(200);
+			this.ball.set_x(250);
+			this.ball.set_y(250);
+			var direction;
+			if(Math.random() > .5) direction = 1; else direction = -1;
+			var randomAngle = Math.random() * Math.PI / 2 - 45;
+			this.ballMovement.x = direction * Math.cos(randomAngle) * this.ballSpeed;
+			this.ballMovement.y = Math.sin(randomAngle) * this.ballSpeed;
+		}
+	}
+	,keyDown: function(event) {
+		if(this.gameState == GameState.Paused && event.keyCode == 32) this.setGameState(GameState.Playing); else if(event.keyCode == 38) this.arrowKeyUp = true; else if(event.keyCode == 40) this.arrowKeyDown = true;
+	}
+	,keyUp: function(event) {
+		if(event.keyCode == 38) this.arrowKeyUp = false; else if(event.keyCode == 40) this.arrowKeyDown = false;
+	}
+	,everyFrame: function(event) {
+		if(this.gameState == GameState.Playing) {
+			if(this.arrowKeyUp) {
+				var _g = this.platform1;
+				_g.set_y(_g.get_y() - this.platformSpeed);
+			}
+			if(this.arrowKeyDown) {
+				var _g1 = this.platform1;
+				_g1.set_y(_g1.get_y() + this.platformSpeed);
+			}
+			if(this.platform1.get_y() < 5) this.platform1.set_y(5);
+			if(this.platform1.get_y() > 395) this.platform1.set_y(395);
+			if(this.ball.get_x() > 300 && this.ball.get_y() > this.platform2.get_y() + 70) {
+				var _g2 = this.platform2;
+				_g2.set_y(_g2.get_y() + this.platformSpeed);
+			}
+			if(this.ball.get_x() > 300 && this.ball.get_y() < this.platform2.get_y() + 30) {
+				var _g3 = this.platform2;
+				_g3.set_y(_g3.get_y() - this.platformSpeed);
+			}
+			if(this.platform2.get_y() < 5) this.platform2.set_y(5);
+			if(this.platform2.get_y() > 395) this.platform2.set_y(395);
+			var _g4 = this.ball;
+			_g4.set_x(_g4.get_x() + this.ballMovement.x);
+			var _g5 = this.ball;
+			_g5.set_y(_g5.get_y() + this.ballMovement.y);
+			if(this.ballMovement.x < 0 && this.ball.get_x() < 30 && this.ball.get_y() >= this.platform1.get_y() && this.ball.get_y() <= this.platform1.get_y() + 100) {
+				this.bounceBall();
+				this.ball.set_x(30);
+			}
+			if(this.ballMovement.x > 0 && this.ball.get_x() > 470 && this.ball.get_y() >= this.platform2.get_y() && this.ball.get_y() <= this.platform2.get_y() + 100) {
+				this.bounceBall();
+				this.ball.set_x(470);
+			}
+			if(this.ball.get_y() < 5 || this.ball.get_y() > 495) this.ballMovement.y *= -1;
+			if(this.ball.get_x() < 5) this.winGame(Player.AI);
+			if(this.ball.get_x() > 495) this.winGame(Player.Human);
+		}
+	}
+	,winGame: function(player) {
+		if(player == Player.Human) this.playerScore++; else this.AIScore++;
+		this.setGameState(GameState.Paused);
+	}
+	,bounceBall: function() {
+		var direction;
+		if(this.ballMovement.x > 0) direction = -1; else direction = 1;
+		var randomAngle = Math.random() * Math.PI / 2 - 45;
+		this.ballMovement.x = direction * Math.cos(randomAngle) * this.ballSpeed;
+		this.ballMovement.y = Math.sin(randomAngle) * this.ballSpeed;
 	}
 	,__class__: Main
 });
@@ -1413,6 +1516,20 @@ Lambda.count = function(it,pred) {
 	}
 	return n;
 };
+var GameState = $hxClasses["GameState"] = { __ename__ : true, __constructs__ : ["Playing","Paused"] };
+GameState.Playing = ["Playing",0];
+GameState.Playing.toString = $estr;
+GameState.Playing.__enum__ = GameState;
+GameState.Paused = ["Paused",1];
+GameState.Paused.toString = $estr;
+GameState.Paused.__enum__ = GameState;
+var Player = $hxClasses["Player"] = { __ename__ : true, __constructs__ : ["Human","AI"] };
+Player.Human = ["Human",0];
+Player.Human.toString = $estr;
+Player.Human.__enum__ = Player;
+Player.AI = ["AI",1];
+Player.AI.toString = $estr;
+Player.AI.__enum__ = Player;
 Math.__name__ = ["Math"];
 var NMEPreloader = function() {
 	openfl_display_Sprite.call(this);

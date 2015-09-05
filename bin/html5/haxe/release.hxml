@@ -13,7 +13,7 @@
 -D openfl-html5
 -D canvas
 -D lime-html5
--D fdb
+-D verbose=1
 -D html5
 -D web
 --remap flash:openfl
